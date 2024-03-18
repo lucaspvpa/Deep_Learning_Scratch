@@ -1,3 +1,4 @@
 # Deep_Learning_Scratch
 
-Esse é um projeto que visa implementar tudo que sei sobre redes neurais sem utilização de frameworks como tensorflow ou pytorch.
+
+This is a project that aims to implement everything I know about neural networks without using frameworks like tensorflow or pytorch.

@@ -5,7 +5,7 @@ class Dense():
         self.weights = np.random.randn(n_input, n_neurons)
         self.bias = np.random.randn(n_neurons)
 
-    def foward(self, input):
+    def forward(self, input):
         self.output = (input @ self.weights) + self.bias
 
     def backward(self):

@@ -24,7 +24,6 @@ class Tensor():
         self.grad += grad
 
         if z is not None:
-            print(z)
             self.children.remove(z)
         
         if self.operation:
@@ -45,6 +44,18 @@ class Tensor():
         """ __iadd__ = self += other """
         op = Add()
         return op.foward(self, tensor(other))
+    
+    def __sub__(self, other):
+        """ __sub__ = self - other"""
+        return self + -other
+    
+    def __rsub__(self, other):
+        """ __rsub__ = other - self"""
+        return other - self
+    
+    def __isub__(self, other):
+        """ __isub__ = self -= other"""
+        return self + -other
     
     def __matmul__(self, other):
         op = MatMul()
@@ -114,6 +125,14 @@ class MatMul():
                 db = db.sum(axis=0)
             b.backward(db, z)
 
+def randint(low=0, high=0, shape=(), requires_grad=False):
+    data = np.random.randint(low, high, size=shape)
+    return Tensor(data, requires_grad=requires_grad)
+
+def randn(shape, requires_grad=False):
+    data = np.random.randn(*shape)
+    return Tensor(data, requires_grad=requires_grad)
+    
 def tensor(data):
     if isinstance(data, Tensor):
         return data

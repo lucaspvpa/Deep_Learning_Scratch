@@ -1,4 +1,5 @@
 import numpy as np
+from tensor import *
 
 class Dense():
     """
@@ -14,11 +15,9 @@ class Dense():
             auxiliar para generalização do modelo
     """
     def __init__(self, n_input, n_neurons):
-        self.weights = np.random.randn(n_input, n_neurons)
-        self.bias = np.random.randn(n_neurons)
+        self.weights = randn((n_input[-1], n_neurons), requires_grad=True)
+        self.bias = randn((1, n_neurons), requires_grad=True)
 
-    def forward(self, input):
+    def __call__(self, input):
+        input = tensor(input)
         self.output = (input @ self.weights) + self.bias
-
-    def backward(self):
-        pass

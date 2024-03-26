@@ -21,3 +21,5 @@ class Dense():
     def __call__(self, input):
         input = tensor(input)
         self.output = (input @ self.weights) + self.bias
+        return self.output
+    

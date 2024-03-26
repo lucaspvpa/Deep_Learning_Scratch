@@ -57,6 +57,11 @@ class Tensor():
         """ __isub__ = self -= other"""
         return self + -other
     
+    def __neg__(self):
+        """ __neg__ = self = -self"""
+        op = Neg()
+        return op.foward(self)
+    
     def __matmul__(self, other):
         op = MatMul()
         return op.foward(self, tensor(other))
@@ -125,6 +130,21 @@ class MatMul():
                 db = db.sum(axis=0)
             b.backward(db, z)
 
+class Neg():
+    def foward(self, tensor_a):
+        requires_grad = tensor_a.requires_grad
+        data = - tensor_a._data
+        z = Tensor(data, requires_grad=requires_grad, operation=self)
+        tensor_a.children.append(z)
+        self.cache = tensor_a
+        return z
+    
+    def backward(self, dz, z):
+        tensor_a = self.cache
+        if tensor_a.requires_grad:
+            da = -dz
+            tensor_a.backward(da, z)
+               
 def randint(low=0, high=0, shape=(), requires_grad=False):
     data = np.random.randint(low, high, size=shape)
     return Tensor(data, requires_grad=requires_grad)

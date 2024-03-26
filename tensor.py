@@ -33,17 +33,17 @@ class Tensor():
     def __add__(self, other):
         """ __add__ = self + other"""
         op = Add()
-        return op.foward(self, tensor(other))
+        return op.forward(self, tensor(other))
     
     def __radd__(self, other):
         """__radd__ = other + self"""
         op = Add()
-        return op.foward(self, tensor(other))
+        return op.forward(self, tensor(other))
     
     def __iadd__(self, other):
         """ __iadd__ = self += other """
         op = Add()
-        return op.foward(self, tensor(other))
+        return op.forward(self, tensor(other))
     
     def __sub__(self, other):
         """ __sub__ = self - other"""
@@ -60,14 +60,30 @@ class Tensor():
     def __neg__(self):
         """ __neg__ = self = -self"""
         op = Neg()
-        return op.foward(self)
+        return op.forward(self)
+    
+    def __mul__(self, other):
+        """ __mul__ = self * other"""
+        op = Mul()
+        return op.forward(self, tensor(other))
+    
+    def __rmul__(self, other):
+        """ __rmul__ = other * self"""
+        op = Mul()
+        return op.forward(self, tensor(other))
+    
+    def __imul__(self, other):
+        """ __imul__ = self *= other"""
+        op = Mul()
+        return op.forward(self, tensor(other))
     
     def __matmul__(self, other):
+        """ __matmul__ = self @ other"""
         op = MatMul()
-        return op.foward(self, tensor(other))
+        return op.forward(self, tensor(other))
     
 class Add:
-    def foward(self, tensor_a, tensor_b):
+    def forward(self, tensor_a, tensor_b):
         requires_grad = tensor_a.requires_grad or tensor_b.requires_grad
         data = tensor_a._data + tensor_b._data
         z = Tensor(data, requires_grad=requires_grad, operation=self)
@@ -77,33 +93,33 @@ class Add:
         return z
 
     def backward(self, dz, z):
-        a, b = self.cache
-        if a.requires_grad:
+        tensor_a, tensor_b = self.cache
+        if tensor_a.requires_grad:
             da = dz
             grad_dim = len(dz.shape)
-            in_dim = len(a.shape)
+            in_dim = len(tensor_a.shape)
             for _ in range(grad_dim - in_dim):
                 da = da.sum(axis=0)
             
-            for n, dim in enumerate(a.shape):
+            for n, dim in enumerate(tensor_a.shape):
                 if dim == 1:
                     da = da.sum(axis=n, keepdims=True)
-            a.backward(da, z)
+            tensor_a.backward(da, z)
             
-        if b.requires_grad:
+        if tensor_b.requires_grad:
             db = dz
             grad_dim = len(dz.shape)
-            in_dim = len(b.shape)
+            in_dim = len(tensor_b.shape)
             for _ in range(grad_dim - in_dim):
                 db = db.sum(axis=0)
 
-            for n, dim in enumerate(b.shape):
+            for n, dim in enumerate(tensor_b.shape):
                 if dim == 1:
                     db = db.sum(axis=n, keepdims=True)
-            b.backward(db, z)
+            tensor_b.backward(db, z)
 
 class MatMul():
-    def foward(self, tensor_a, tensor_b):
+    def forward(self, tensor_a, tensor_b):
         requires_grad = tensor_a.requires_grad or tensor_b.requires_grad
         data = tensor_a._data @ tensor_b._data
         z = Tensor(data, requires_grad=requires_grad, operation=self)
@@ -113,25 +129,25 @@ class MatMul():
         return z
 
     def backward(self, dz, z):
-        a, b = self.cache
-        if a.requires_grad:
-            da = dz @ b._data.swapaxes(-1, -2)
+        tensor_a, tensor_b = self.cache
+        if tensor_a.requires_grad:
+            da = dz @ tensor_b._data.swapaxes(-1, -2)
             grad_dim = len(da.shape)
-            in_dim = len(a.shape)
+            in_dim = len(tensor_a.shape)
             for _ in range(grad_dim - in_dim):
                 da = da.sum(axis=0)
-            a.backward(da, z)
+            tensor_a.backward(da, z)
         
-        if b.requires_grad:
-            db =  a._data.swapaxes(-1, -2) @ dz
+        if tensor_b.requires_grad:
+            db =  tensor_a._data.swapaxes(-1, -2) @ dz
             grad_dim = len(db.shape)
-            in_dim = len(b.shape)
+            in_dim = len(tensor_b.shape)
             for _ in range(grad_dim - in_dim):
                 db = db.sum(axis=0)
-            b.backward(db, z)
+            tensor_b.backward(db, z)
 
 class Neg():
-    def foward(self, tensor_a):
+    def forward(self, tensor_a):
         requires_grad = tensor_a.requires_grad
         data = - tensor_a._data
         z = Tensor(data, requires_grad=requires_grad, operation=self)
@@ -144,6 +160,41 @@ class Neg():
         if tensor_a.requires_grad:
             da = -dz
             tensor_a.backward(da, z)
+
+class Mul():
+    def forward(self, tensor_a, tensor_b):
+        requires_grad = tensor_a.requires_grad or tensor_b.requires_grad
+        data = tensor_a._data * tensor_b._data
+        z = Tensor(data, requires_grad=requires_grad, operation=self)
+        tensor_a.children.append(z)
+        tensor_b.children.append(z)
+        self.cache = (tensor_a, tensor_b)
+        return z
+    
+    def backward(self, dz, z):
+        tensor_a, tensor_b = self.cache
+        if tensor_a.requires_grad:
+            da = dz * tensor_b._data
+            grad_dim = len(dz.shape)
+            in_dim = len(tensor_a.shape)
+            for _ in range(grad_dim - in_dim):
+                da = da.sum(axis=0)
+            for n, dim in enumerate(tensor_a.shape):
+                if dim == 1:
+                    da = da.sum(axis=n, keepdims=True)
+            tensor_a.backward(da, z)
+        
+        if tensor_b.requires_grad:
+            db = dz * tensor_a._data
+            grad_dim = len(dz.shape)
+            in_dim = len(tensor_b.shape)
+            for _ in range(grad_dim - in_dim):
+                db = db.sum(axis=0)
+            for n, dim in enumerate(tensor_b.shape):
+                if dim == 1:
+                    db = db.sum(axis=n, keepdims=True)
+            tensor_b.backward(db, z)
+
                
 def randint(low=0, high=0, shape=(), requires_grad=False):
     data = np.random.randint(low, high, size=shape)

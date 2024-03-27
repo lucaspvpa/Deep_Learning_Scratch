@@ -1,5 +1,6 @@
 import numpy as np
 from tensor import *
+from utils import *
 
 class Dense():
     """

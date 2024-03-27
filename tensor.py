@@ -261,15 +261,15 @@ class Max:
         self.cache = (tensor_a, data, dim)
         return z
     
-    # Está errado por enquanto
     def backward(self, dz, z):
         tensor_a, data, dim = self.cache
         if tensor_a.requires_grad:
+            max = data
             if tensor_a.shape != dz.shape:
                 dz = np.expand_dims(dz, axis=dim)
                 dz = dz * np.ones_like(tensor_a._data)
-            max = np.expand_dims(data, axis=dim)
-            max = max * np.ones_like(tensor_a._data)
+                max = np.expand_dims(data, axis=dim)
+                max = max * np.ones_like(tensor_a._data)
             da = dz * np.equal(tensor_a._data, max)
             tensor_a.backward(da, z)
 

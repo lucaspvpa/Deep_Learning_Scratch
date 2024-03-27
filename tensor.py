@@ -77,6 +77,11 @@ class Tensor():
         op = Mul()
         return op.forward(self, tensor(other))
     
+    def __truediv__(self, other):
+        """New = self / other"""
+        op = Div()
+        return op.forward(self, tensor(other))
+    
     def __pow__(self, other):
         op = Pow()
         return op.forward(self, tensor(other))
@@ -88,7 +93,11 @@ class Tensor():
     
     def sum(self, dim=-1, keepdims=False):
         op = Sum()
-        return op.foward(self, dim, keepdims=keepdims)
+        return op.forward(self, dim, keepdims=keepdims)
+    
+    def max(self, dim=-1, keepdims=False):
+        op = Max()
+        return op.forward(self, dim, keepdims=keepdims)
     
 class Add:
     def forward(self, tensor_a, tensor_b):
@@ -226,7 +235,7 @@ class Pow():
             tensor_a.backward(da, z)
 
 class Sum:
-    def foward(self, tensor_a, dim, keepdims):
+    def forward(self, tensor_a, dim, keepdims):
         requires_grad = tensor_a.requires_grad
         data = tensor_a._data.sum(axis=dim, keepdims=keepdims)
         z = Tensor(data, requires_grad=requires_grad, operation=self)
@@ -240,6 +249,67 @@ class Sum:
             da = np.ones(tensor_a.shape) * dz
             tensor_a.backward(da, z)
 
+
+class Max:
+    def forward(self, tensor_a, dim, keepdims):
+        requires_grad = tensor_a.requires_grad
+        data = np.max(tensor_a._data, axis=dim, keepdims=keepdims)
+        if keepdims:
+            data = np.ones_like(tensor_a.shape) * data
+        z = Tensor(data, requires_grad=requires_grad, operation=self)
+        tensor_a.children.append(z)
+        self.cache = (tensor_a, data, dim)
+        return z
+    
+    # Está errado por enquanto
+    def backward(self, dz, z):
+        tensor_a, data, dim = self.cache
+        if tensor_a.requires_grad:
+            if tensor_a.shape != dz.shape:
+                dz = np.expand_dims(dz, axis=dim)
+                dz = dz * np.ones_like(tensor_a._data)
+            max = np.expand_dims(data, axis=dim)
+            max = max * np.ones_like(tensor_a._data)
+            da = dz * np.equal(tensor_a._data, max)
+            tensor_a.backward(da, z)
+
+
+class Div():
+    def forward(self, tensor_a, tensor_b):
+        requires_grad = tensor_a.requires_grad or tensor_b.requires_grad
+        data = tensor_a._data / tensor_b._data
+        z = Tensor(data, requires_grad=requires_grad, operation=self)
+        tensor_a.children.append(z)
+        tensor_b.children.append(z)
+        self.cache = (tensor_a, tensor_b)
+        return z
+    
+    def backward(self, dz, z):
+        tensor_a, tensor_b = self.cache
+        if tensor_a.requires_grad:
+            da = dz * (1 / tensor_b._data)
+            grad_dim = len(dz.shape)
+            in_dim = len(tensor_a.shape)
+            for _ in range(grad_dim - in_dim):
+                da = da.sum(axis=0)
+            
+            for n, dim in enumerate(tensor_a.shape):
+                if dim == 1:
+                    da = da.sum(axis=n, keepdims=True)
+            tensor_a.backward(da, z)
+
+        if tensor_b.requires_grad:
+            db = - dz * tensor_a._data / (tensor_b._data ** 2)
+            grad_dim = len(dz.shape)
+            in_dim = len(tensor_b.shape)
+            for _ in range(grad_dim - in_dim):
+                db = db.sum(axis=0)
+            for n, dim in enumerate(tensor_b.shape):
+                if dim == 1:
+                    db = db.sum(axis=n, keepdims=True)
+            tensor_b.backward(db, z)
+
+            
 def tensor(data):
     if isinstance(data, Tensor):
         return data

@@ -86,6 +86,10 @@ class Tensor():
         op = MatMul()
         return op.forward(self, tensor(other))
     
+    def sum(self, dim=-1, keepdims=False):
+        op = Sum()
+        return op.foward(self, dim, keepdims=keepdims)
+    
 class Add:
     def forward(self, tensor_a, tensor_b):
         requires_grad = tensor_a.requires_grad or tensor_b.requires_grad
@@ -220,15 +224,22 @@ class Pow():
                 if dim == 1:
                     da = da.sum(axis=n, keepdims=True)
             tensor_a.backward(da, z)
-               
-def randint(low=0, high=0, shape=(), requires_grad=False):
-    data = np.random.randint(low, high, size=shape)
-    return Tensor(data, requires_grad=requires_grad)
 
-def randn(shape, requires_grad=False):
-    data = np.random.randn(*shape)
-    return Tensor(data, requires_grad=requires_grad)
+class Sum:
+    def foward(self, tensor_a, dim, keepdims):
+        requires_grad = tensor_a.requires_grad
+        data = tensor_a._data.sum(axis=dim, keepdims=keepdims)
+        z = Tensor(data, requires_grad=requires_grad, operation=self)
+        tensor_a.children.append(z)
+        self.cache = tensor_a
+        return z
     
+    def backward(self, dz, z):
+        tensor_a = self.cache
+        if tensor_a.requires_grad:
+            da = np.ones(tensor_a.shape) * dz
+            tensor_a.backward(da, z)
+
 def tensor(data):
     if isinstance(data, Tensor):
         return data

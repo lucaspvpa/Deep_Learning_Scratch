@@ -15,12 +15,19 @@ class Dense():
             bias: array com o mesmo tamanho do número de neurônios, serve como
             auxiliar para generalização do modelo
     """
-    def __init__(self, n_input, n_neurons):
-        self.weights = randn((n_input[-1], n_neurons), requires_grad=True)
-        self.bias = randn((1, n_neurons), requires_grad=True)
+    def __init__(self, n_neurons=0, n_input=None):
+        self.n_neurons = None
+        if n_input:
+            self.weights = randn((n_input[-1], n_neurons), requires_grad=True)
+            self.bias = randn((1, n_neurons), requires_grad=True)
+        else:
+            self.n_neurons = n_neurons
 
     def __call__(self, input):
         input = tensor(input)
+        if self.n_neurons:
+            self.weights = randn((input.shape[-1], self.n_neurons), requires_grad=True)
+            self.bias = randn((1, self.n_neurons), requires_grad=True)
         self.output = (input @ self.weights) + self.bias
         return self.output
     

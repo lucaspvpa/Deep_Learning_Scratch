@@ -30,4 +30,9 @@ class Dense():
             self.bias = randn((1, self.n_neurons), requires_grad=True)
         self.output = (input @ self.weights) + self.bias
         return self.output
-    
+
+class ReLU():
+    def __call__(self, input):
+        mask = Tensor(np.where(input._data < 0, 0, 1))
+        input = input * mask
+        return input

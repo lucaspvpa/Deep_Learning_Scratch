@@ -9,5 +9,7 @@ class MSE():
     def __call__(self, y_pred, y_true):
         y_pred = tensor(y_pred)
         y_true = tensor(y_true)
-        self.mse = (1 / y_pred.shape[1]) * sum((y_true - y_pred)**2)
+        y_pred_reshape = y_pred.reshape(*y_true.shape)
+
+        self.mse = (1 / y_true.shape[1]) * sum((y_true - y_pred_reshape)**2)
         return self.mse

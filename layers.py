@@ -2,37 +2,55 @@ import numpy as np
 from tensor import *
 from utils import *
 
-class Dense():
-    """
-        Classe que define a camada Dense (hidden layer):
-            forward: aplica a equação (Input x Weight) + bias
-            backward: aplica a derivada parcial pela regra da cadeia,
-            necessário para implementação do algoritmo de backpropagation
+class Module():
+    def __init__(self):
+        pass
 
-        Attributes:
-            weights: é um array multidimensional que contem os pesos da camada
-            a ser multiplicada (dot product) pela entrada
-            bias: array com o mesmo tamanho do número de neurônios, serve como
-            auxiliar para generalização do modelo
-    """
-    def __init__(self, n_neurons=0, n_input=None):
-        self.n_neurons = None
-        if n_input:
-            self.weights = randn((n_input[-1], n_neurons), requires_grad=True)
-            self.bias = randn((1, n_neurons), requires_grad=True)
-        else:
-            self.n_neurons = n_neurons
+    def __call__(self, x):
+        return self.forward(x)
 
-    def __call__(self, input):
+    def parameters(self):
+        params = []
+        for _, param in self.__dict__.items():
+            if isinstance(param, Module):
+                params += param.parameters()
+            elif isinstance(param, Tensor):
+                if param.requires_grad:
+                    params.append(param)
+        return params
+    
+    def train(self):
+        self.mode = 'train'
+        for _, param in self.__dict__.items():
+            if isinstance(param, Module):
+                param.train()
+    
+    def eval(self):
+        self.mode = 'eval'
+        for _, param in self.__dict__.items():
+            if isinstance(param, Module):
+                param.eval()
+
+class Dense(Module):
+    def __init__(self, n_neurons=None, n_input=None, bias=True):
+        super().__init__()
+        self.has_bias = bias
+        self.weights = Tensor(np.random.randn(n_input, n_neurons), requires_grad=True)
+        if self.has_bias:
+            self.bias = Tensor(np.zeros(n_neurons), requires_grad=True)
+
+    def forward(self, input):
         input = tensor(input)
-        if self.n_neurons:
-            self.weights = randn((input.shape[-1], self.n_neurons), requires_grad=True)
-            self.bias = randn((1, self.n_neurons), requires_grad=True)
-        self.output = (input @ self.weights) + self.bias
+        self.output = input @ self.weights 
+        if self.has_bias:
+            self.output += self.bias
         return self.output
 
-class ReLU():
-    def __call__(self, input):
+class ReLU(Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, input):
         mask = Tensor(np.where(input._data < 0, 0, 1))
         input = input * mask
         return input

@@ -30,6 +30,17 @@ class Tensor():
             if not self.children:
                 self.operation.backward(self.grad, self)
 
+    def zero_grad(self):
+        self.grad = np.zeros_like(self._data)
+
+    def reshape(self, *shape):
+        op = Reshape()
+        return op.forward(self, shape)
+    
+    def transpose(self, *dims):
+        op = Transpose()
+        return op.forward(self, *dims)
+    
     def __add__(self, other):
         """ __add__ = self + other"""
         op = Add()
@@ -309,7 +320,36 @@ class Div():
                     db = db.sum(axis=n, keepdims=True)
             tensor_b.backward(db, z)
 
-            
+class Reshape:
+    def forward(self, tensor_a, shape):
+        requires_grad = tensor_a.requires_grad
+        data = tensor_a._data.reshape(*shape)
+        z = Tensor(data, requires_grad=requires_grad, operation=self)
+        tensor_a.children.append(z)
+        self.cache = tensor_a
+        return z
+
+    def backward(self, dz, z):
+        tensor_a = self.cache
+        if tensor_a.requires_grad:
+            da = dz.reshape(tensor_a.shape)
+            tensor_a.backward(da, z)
+
+class Transpose:
+    def forward(self, tensor_a, dims):
+        requires_grad = tensor_a.requires_grad
+        data = tensor_a._data.swapaxes(*dims)
+        z = Tensor(data, requires_grad=requires_grad, operation=self)
+        tensor_a.children.append(z)
+        self.cache = (tensor_a, dims)
+        return z
+    
+    def backward(self, dz, z):
+        tensor_a, dims = self.cache
+        if tensor_a.requires_grad:
+            da = dz.swapaxes(*dims)
+            tensor_a.backward(da, z)
+
 def tensor(data):
     if isinstance(data, Tensor):
         return data

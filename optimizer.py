@@ -46,4 +46,26 @@ class RMSProp:
             parameter.zero_grad()
 
 class Adam():
-    pass
+    def __init__(self, parameters, lr, beta_1=0.9, beta_2=0.999, eps=1e-07):
+        self.parameters = parameters
+        self.lr = lr
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        self.eps = eps
+        self.t = 1
+        for parameter in self.parameters:
+            parameter.mt = np.zeros(parameter.shape)
+            parameter.vt = np.zeros(parameter.shape)
+    
+    def step(self):
+        for parameter in self.parameters:
+            parameter.mt = (self.beta_1 * parameter.mt) + (1 - self.beta_1) * parameter.grad
+            parameter.vt = (self.beta_2 * parameter.vt) + (1 - self.beta_2) * np.square(parameter.grad)
+            mt = parameter.mt/(1 - (self.beta_1**self.t))
+            vt = parameter.vt/(1 - (self.beta_2**self.t))
+            parameter._data = parameter._data - (self.lr / (np.sqrt(vt + self.eps)) * mt)
+        self.t += 1
+
+    def zero_grad(self):
+        for parameter in self.parameters:
+            parameter.zero_grad()
